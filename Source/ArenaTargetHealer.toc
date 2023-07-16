@@ -1,0 +1,6 @@
+## Interface: 100105
+## Title: Arena Target Healer
+## Author: Teelo (US-Jubei'thos)
+## X-Curse-Project-ID: 415931
+
+ArenaTargetHealer.lua
