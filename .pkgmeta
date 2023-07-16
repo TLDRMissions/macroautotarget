@@ -1,7 +1,7 @@
 package-as: ArenaTargetHealer
 
 move-folders:
- macroautotarget/Source: ArenaTargetHealer
+ macroautotarget/Source: macroautotarget
 
 ignore:
  - LICENCE.md
