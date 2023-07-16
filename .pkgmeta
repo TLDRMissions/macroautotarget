@@ -1,0 +1,8 @@
+package-as: ArenaTargetHealer
+
+move-folders:
+ macroautotarget/Source: ArenaTargetHealer
+
+ignore:
+ - LICENCE.md
+ - README.md
