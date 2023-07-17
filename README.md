@@ -25,3 +25,6 @@ During the prep phase of arena, if the enemy healer is in slot 2, it will be cha
 - #RTH: target first friendly party/raid healer
 - #RTT: target first friendly party/raid tank
 - #RTD: target first friendly party/raid dps
+- Optional number at the end of the command, to pick the second/third/etc tank/healer/dps in your party/raid.
+- - Eg
+  - #RTD2: target second friendly party/raid dps
