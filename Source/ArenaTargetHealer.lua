@@ -2,6 +2,7 @@ local f = CreateFrame("Frame")
 f:RegisterEvent("ARENA_PREP_OPPONENT_SPECIALIZATIONS")
 f:RegisterEvent("GROUP_ROSTER_UPDATE")
 f:RegisterEvent("RAID_ROSTER_UPDATE")
+f:RegisterEvent("PLAYER_REGEN_ENABLED")
 
 -- supported commands:
 -- #ATH
@@ -16,6 +17,10 @@ f:RegisterEvent("RAID_ROSTER_UPDATE")
 -- target first friendly party/raid tank
 -- #RTD
 -- target first friendly party/raid dps
+-- optional numbers such as:
+-- #RTH2
+-- #RTH12
+-- targets the 2nd or 12th DPS in the party/raid
 
 local function updateArena(command, index)
     local global, char = GetNumMacros()
@@ -48,36 +53,50 @@ local function updateArenaDPS(dpsIndex)
     updateArena("#ATD", dpsIndex)
 end
 
-local function updateFriendly(command, unitID)
+local function updateFriendly(command, unitID, rosterIndex)
     local global, char = GetNumMacros()
     for i = 1, (char + 120) do
         if (i <= global) or (i > 119) then
             local name, icon, body = GetMacroInfo(i)
-            if body and body:find(command) then
-                body = body:gsub("/tar [^%s]+", "/tar "..unitID)
-                body = body:gsub("/target [^%s]+", "/tar "..unitID)
-                body = body:gsub("/focus [^%s]+", "/focus "..unitID)
-                body = body:gsub("/cast %[([^@%]]*)@[^,%]]+([^@%]]*)%]", "/cast [%1@"..unitID.."%2]")
-                EditMacro(name, name, icon, body)
+            if body then
+                local secondaryMatch = body:match(command..rosterIndex)
+                local alternateMatch = body:match(command.."[0-9]")
+                local primaryMatch = body:match(command)
+                
+                if secondaryMatch or ((not alternateMatch) and primaryMatch) then
+                    body = body:gsub("/tar [^%s]+", "/tar "..unitID)
+                    body = body:gsub("/target [^%s]+", "/tar "..unitID)
+                    body = body:gsub("/focus [^%s]+", "/focus "..unitID)
+                    body = body:gsub("/cast %[([^@%]]*)@[^,%]]+([^@%]]*)%]", "/cast [%1@"..unitID.."%2]")
+                    EditMacro(name, name, icon, body)
+                end
             end
         end
     end
 end
 
-local function updateFriendlyHealer(unitID)
-    updateFriendly("#RTH", unitID)
+local function updateFriendlyHealer(unitID, rosterIndex)
+    updateFriendly("#RTH", unitID, rosterIndex)
 end
 
-local function updateFriendlyTank(unitID)
-    updateFriendly("#RTT", unitID)
+local function updateFriendlyTank(unitID, rosterIndex)
+    updateFriendly("#RTT", unitID, rosterIndex)
 end
 
-local function updateFriendlyDPS(unitID)
-    updateFriendly("#RTD", unitID)
+local function updateFriendlyDPS(unitID, rosterIndex)
+    updateFriendly("#RTD", unitID, rosterIndex)
 end
 
-f:SetScript("OnEvent", function()
-    if InCombatLockdown() then return end
+local checkAfterCombat
+f:SetScript("OnEvent", function(self, event)
+    if (event ~= "PLAYER_REGEN_ENABLED") and InCombatLockdown() then
+        checkAfterCombat = true
+        return
+    end
+    if (event == "PLAYER_REGEN_ENABLED") and (not checkAfterCombat) then
+        return
+    end
+    
     local healerIndex, tankIndex, dpsIndex
     for index = 1, 3 do
         local specID = GetArenaOpponentSpec(index)
@@ -103,55 +122,58 @@ f:SetScript("OnEvent", function()
         updateArenaDPS(dpsIndex)
     end
     
+    --
+    -- ARENA / FRIENDLY SEPARATOR
+    --
+    
     healerIndex, tankIndex, dpsIndex = nil, nil, nil
+    local numHealer, numTank, numDPS = 0, 0, 0
     local prefix = "raid"
     
     if IsInRaid() then
         for index = 1, MAX_RAID_MEMBERS do
             local _, _, _, _, _, _, _, _, _, _, _, role = GetRaidRosterInfo(index)
-            if (not healerIndex) and (role == "HEALER") then
-                healerIndex = index
+            if (role == "HEALER") then
+                numHealer = numHealer + 1
+                updateFriendlyHealer(prefix..index, numHealer)
             elseif (not tankIndex) and (role == "TANK") then
-                tankIndex = index
+                numTank = numTank + 1
+                updateFriendlyTank(prefix..index, numTank)
             elseif (not dpsIndex) and (role == "DAMAGER") then
-                dpsIndex = index
+                numDPS = numDPS + 1
+                updateFriendlyDPS(prefix..index, numDPS)
             end
         end
     elseif IsInGroup() then
         prefix = "party"
         for index = 1, GetNumSubgroupMembers() do
             local role = UnitGroupRolesAssigned(prefix..index)
-            if (not healerIndex) and (role == "HEALER") then
-                healerIndex = index
+            if (role == "HEALER") then
+                numHealer = numHealer + 1
+                updateFriendlyHealer(prefix..index, numHealer)
             elseif (not tankIndex) and (role == "TANK") then
-                tankIndex = index
+                numTank = numTank + 1
+                updateFriendlyTank(prefix..index, numTank)
             elseif (not dpsIndex) and (role == "DAMAGER") then
-                dpsIndex = index
+                numDPS = numDPS + 1
+                updateFriendlyDPS(prefix..index, numDPS)
             end
         end
     end
     
-    if healerIndex then
-        updateFriendlyHealer(prefix..healerIndex)
-    else
-        updateFriendlyHealer("player")
+    for i = (numHealer+1), MAX_RAID_MEMBERS do
+        updateFriendlyHealer("player", i)
     end
     
-    if tankIndex then
-        updateFriendlyTank(prefix..tankIndex)
-    else
-        updateFriendlyTank("player")
+    for i = (numTank+1), MAX_RAID_MEMBERS do
+        updateFriendlyTank("player", i)
     end
     
-    if dpsIndex then
-        updateFriendlyDPS(prefix..dpsIndex)
-    else
-        updateFriendlyDPS("player")
+    for i = (numDPS+1), MAX_RAID_MEMBERS do
+        updateFriendlyDPS("player", i)
     end
 end)
 
---[[
-function testATH(index)
-    updateFriendlyHealer(index)
-end
-]]
+--function testATH(index)
+--    updateFriendlyHealer(index)
+--end
