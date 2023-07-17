@@ -63,7 +63,7 @@ local function updateFriendly(command, unitID, rosterIndex)
                 local alternateMatch = body:match(command.."[0-9]")
                 local primaryMatch = body:match(command)
                 
-                if secondaryMatch or ((not alternateMatch) and primaryMatch) then
+                if secondaryMatch or ((rosterIndex == 1) and (not alternateMatch) and primaryMatch) then
                     body = body:gsub("/tar [^%s]+", "/tar "..unitID)
                     body = body:gsub("/target [^%s]+", "/tar "..unitID)
                     body = body:gsub("/focus [^%s]+", "/focus "..unitID)
