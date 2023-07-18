@@ -95,6 +95,8 @@ f:SetScript("OnEvent", function(self, event)
     end
     if (event == "PLAYER_REGEN_ENABLED") and (not checkAfterCombat) then
         return
+    elseif event == "PLAYER_REGEN_ENABLED" then
+        checkAfterCombat = false
     end
     
     local healerIndex, tankIndex, dpsIndex
