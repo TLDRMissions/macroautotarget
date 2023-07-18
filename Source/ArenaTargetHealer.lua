@@ -132,16 +132,18 @@ f:SetScript("OnEvent", function(self, event)
     
     if IsInRaid() then
         for index = 1, MAX_RAID_MEMBERS do
-            local _, _, _, _, _, _, _, _, _, _, _, role = GetRaidRosterInfo(index)
-            if (role == "HEALER") then
-                numHealer = numHealer + 1
-                updateFriendlyHealer(prefix..index, numHealer)
-            elseif (not tankIndex) and (role == "TANK") then
-                numTank = numTank + 1
-                updateFriendlyTank(prefix..index, numTank)
-            elseif (not dpsIndex) and (role == "DAMAGER") then
-                numDPS = numDPS + 1
-                updateFriendlyDPS(prefix..index, numDPS)
+            local name, _, _, _, _, _, _, _, _, _, _, role = GetRaidRosterInfo(index)
+            if name ~= UnitName("player") then
+                if (role == "HEALER") then
+                    numHealer = numHealer + 1
+                    updateFriendlyHealer(prefix..index, numHealer)
+                elseif (not tankIndex) and (role == "TANK") then
+                    numTank = numTank + 1
+                    updateFriendlyTank(prefix..index, numTank)
+                elseif (not dpsIndex) and (role == "DAMAGER") then
+                    numDPS = numDPS + 1
+                    updateFriendlyDPS(prefix..index, numDPS)
+                end
             end
         end
     elseif IsInGroup() then
