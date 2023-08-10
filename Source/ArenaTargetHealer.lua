@@ -67,7 +67,9 @@ local function updateFriendly(command, unitID, rosterIndex)
                     body = body:gsub("/tar [^%s]+", "/tar "..unitID)
                     body = body:gsub("/target [^%s]+", "/tar "..unitID)
                     body = body:gsub("/focus [^%s]+", "/focus "..unitID)
-                    body = body:gsub("/cast %[([^@%]]*)@[^,%]]+([^@%]]*)%]", "/cast [%1@"..unitID.."%2]")
+                    body = body:gsub("@player", "@"..unitID)
+                    body = body:gsub("@party[%d]+", "@"..unitID)
+                    body = body:gsub("@raid[%d]+", "@"..unitID)
                     EditMacro(name, name, icon, body)
                 end
             end
