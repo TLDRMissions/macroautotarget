@@ -1,0 +1,6 @@
+## Interface: 30402
+## Title: Macro Auto Target
+## Author: Teelo (US-Jubei'thos)
+## X-Curse-Project-ID: 415931
+
+wrath\ArenaTargetHealer.lua
