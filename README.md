@@ -22,6 +22,9 @@ During the prep phase of arena, if the enemy healer is in slot 2, it will be cha
 - #ATH: target first enemy arena healer
 - #ATT: target first enemy arena tank
 - #ATD: target first enemy arena dps
+- #ATC: target first enemey arena caster (any DPS that isn't melee or a hunter)
+- #ATM: target first enemy arena melee DPS
+- #ATR: target first enemy arena ranged DPS (same as #ATC except includes BM and marksman hunters)
 - #RTH: target first friendly party/raid healer
 - #RTT: target first friendly party/raid tank
 - #RTD: target first friendly party/raid dps
