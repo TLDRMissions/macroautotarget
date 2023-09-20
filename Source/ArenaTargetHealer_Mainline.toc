@@ -3,4 +3,5 @@
 ## Author: Teelo (US-Jubei'thos)
 ## X-Curse-Project-ID: 415931
 
+mainline\SpecTable.lua
 mainline\ArenaTargetHealer.lua

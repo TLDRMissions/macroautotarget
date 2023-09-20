@@ -1,3 +1,5 @@
+local addonName, addon = ...
+
 local f = CreateFrame("Frame")
 f:RegisterEvent("ARENA_PREP_OPPONENT_SPECIALIZATIONS")
 f:RegisterEvent("GROUP_ROSTER_UPDATE")
@@ -11,6 +13,12 @@ f:RegisterEvent("PLAYER_REGEN_ENABLED")
 -- target first enemy arena tank
 -- #ATD
 -- target first enemy arena dps
+-- #ATC
+-- target first enemy arena caster (not hunters)
+-- #ATM
+-- target first enemy arena melee
+-- #ATR
+-- target first enemy arena hunter or caster
 -- #RTH
 -- target first friendly party/raid healer
 -- #RTT
@@ -51,6 +59,21 @@ end
 local function updateArenaDPS(dpsIndex)
     if (not dpsIndex) or (type(dpsIndex) ~= "number") or (dpsIndex < 1) or (dpsIndex > 3) then return end
     updateArena("#ATD", dpsIndex)
+end
+
+local function updateArenaCaster(index)
+    if (not index) or (type(index) ~= "number") or (index < 1) or (index > 3) then return end
+    updateArena("#ATC", index)
+end
+
+local function updateArenaMelee(index)
+    if (not index) or (type(index) ~= "number") or (index < 1) or (index > 3) then return end
+    updateArena("#ATM", index)
+end
+
+local function updateArenaRanged(index)
+    if (not index) or (type(index) ~= "number") or (index < 1) or (index > 3) then return end
+    updateArena("#ATR", index)
 end
 
 local function updateFriendly(command, unitID, rosterIndex)
@@ -101,7 +124,7 @@ f:SetScript("OnEvent", function(self, event)
         checkAfterCombat = false
     end
     
-    local healerIndex, tankIndex, dpsIndex
+    local healerIndex, tankIndex, dpsIndex, casterIndex, meleeIndex, rangedIndex
     for index = 1, 3 do
         local specID = GetArenaOpponentSpec(index)
         if (specID and specID > 0) then
@@ -112,6 +135,18 @@ f:SetScript("OnEvent", function(self, event)
                 tankIndex = index
             elseif (not dpsIndex) and (role == "DAMAGER") then
                 dpsIndex = index
+                
+                local roleType = addon.SpecIDToRole[specID]
+                if (not casterIndex) and (roleType == "CASTER") then
+                    casterIndex = index
+                    if not rangedIndex then
+                        rangedIndex = index
+                    end
+                elseif (not meleeIndex) and (roleType == "MELEE") then
+                    meleeIndex = index
+                elseif (not rangedIndex) and (roleType == "RANGED") then
+                    rangedIndex = index
+                end
             end
         end
     end
@@ -124,6 +159,16 @@ f:SetScript("OnEvent", function(self, event)
     end
     if dpsIndex then
         updateArenaDPS(dpsIndex)
+    end
+    
+    if casterIndex then
+        updateArenaCaster(casterIndex)
+    end
+    if meleeIndex then
+        updateArenaMelee(meleeIndex)
+    end
+    if rangedIndex then
+        updateArenaRanged(rangedIndex)
     end
     
     --
