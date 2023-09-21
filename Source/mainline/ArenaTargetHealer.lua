@@ -2,6 +2,7 @@ local addonName, addon = ...
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("ARENA_PREP_OPPONENT_SPECIALIZATIONS")
+f:RegisterEvent("ARENA_OPPONENT_UPDATE")
 f:RegisterEvent("GROUP_ROSTER_UPDATE")
 f:RegisterEvent("RAID_ROSTER_UPDATE")
 f:RegisterEvent("PLAYER_REGEN_ENABLED")
