@@ -33,16 +33,14 @@ f:RegisterEvent("PLAYER_REGEN_ENABLED")
 
 local function updateArena(command, index)
     local global, char = GetNumMacros()
-    for i = 1, (char + 120) do
-        if (i <= global) or (i > 119) then
-            local name, icon, body = GetMacroInfo(i)
-            if body and body:find(command) then
-                body = body:gsub("/tar arena%d", "/tar arena"..index)
-                body = body:gsub("/target arena%d", "/tar arena"..index)
-                body = body:gsub("/focus arena%d", "/focus arena"..index)
-                body = body:gsub("/cast %[([^@%]]*)@arena%d([^@%]]*)%]", "/cast [%1@arena"..index.."%2]")
-                EditMacro(name, name, icon, body)
-            end
+    for macroIndex = 1, 138 do
+        local name, icon, body = GetMacroInfo(macroIndex)
+        if name and body and body:find(command) then
+            body = body:gsub("/tar arena%d", "/tar arena"..index)
+            body = body:gsub("/target arena%d", "/tar arena"..index)
+            body = body:gsub("/focus arena%d", "/focus arena"..index)
+            body = body:gsub("/cast %[([^@%]]*)@arena%d([^@%]]*)%]", "/cast [%1@arena"..index.."%2]")
+            EditMacro(macroIndex, name, icon, body)
         end
     end
 end
