@@ -6,6 +6,7 @@ f:RegisterEvent("ARENA_OPPONENT_UPDATE")
 f:RegisterEvent("GROUP_ROSTER_UPDATE")
 f:RegisterEvent("RAID_ROSTER_UPDATE")
 f:RegisterEvent("PLAYER_REGEN_ENABLED")
+f:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
 
 -- supported commands:
 -- #ATH
@@ -31,48 +32,55 @@ f:RegisterEvent("PLAYER_REGEN_ENABLED")
 -- #RTH12
 -- targets the 2nd or 12th DPS in the party/raid
 
-local function updateArena(command, index)
+local function updateArena(command, index, numRole)
     local global, char = GetNumMacros()
     for macroIndex = 1, 138 do
         local name, icon, body = GetMacroInfo(macroIndex)
         if name and body and body:find(command) then
-            body = body:gsub("/tar arena%d", "/tar arena"..index)
-            body = body:gsub("/target arena%d", "/tar arena"..index)
-            body = body:gsub("/focus arena%d", "/focus arena"..index)
-            body = body:gsub("/cast %[([^@%]]*)@arena%d([^@%]]*)%]", "/cast [%1@arena"..index.."%2]")
-            EditMacro(macroIndex, name, icon, body)
+            local secondaryMatch = body:match(command..numRole.."[0-9]?")
+            if secondaryMatch ~= command..numRole then secondaryMatch = nil end
+            local alternateMatch = body:match(command.."[0-9]+")
+            local primaryMatch = body:match(command)
+        
+            if secondaryMatch or ((numRole == 1) and (not alternateMatch) and primaryMatch) then
+                body = body:gsub("/tar arena%d", "/tar arena"..index)
+                body = body:gsub("/target arena%d", "/tar arena"..index)
+                body = body:gsub("/focus arena%d", "/focus arena"..index)
+                body = body:gsub("/cast %[([^@%]]*)@arena%d([^@%]]*)%]", "/cast [%1@arena"..index.."%2]")
+                EditMacro(macroIndex, name, icon, body)
+            end
         end
     end
 end
 
-local function updateArenaHealer(healerIndex)
+local function updateArenaHealer(healerIndex, numRole)
     if (not healerIndex) or (type(healerIndex) ~= "number") or (healerIndex < 1) or (healerIndex > 3) then return end
-    updateArena("#ATH", healerIndex)
+    updateArena("#ATH", healerIndex, numRole)
 end
 
-local function updateArenaTank(tankIndex)
+local function updateArenaTank(tankIndex, numRole)
     if (not tankIndex) or (type(tankIndex) ~= "number") or (tankIndex < 1) or (tankIndex > 3) then return end
-    updateArena("#ATT", tankIndex)
+    updateArena("#ATT", tankIndex, numRole)
 end
 
-local function updateArenaDPS(dpsIndex)
+local function updateArenaDPS(dpsIndex, numRole)
     if (not dpsIndex) or (type(dpsIndex) ~= "number") or (dpsIndex < 1) or (dpsIndex > 3) then return end
-    updateArena("#ATD", dpsIndex)
+    updateArena("#ATD", dpsIndex, numRole)
 end
 
-local function updateArenaCaster(index)
+local function updateArenaCaster(index, numRole)
     if (not index) or (type(index) ~= "number") or (index < 1) or (index > 3) then return end
-    updateArena("#ATC", index)
+    updateArena("#ATC", index, numRole)
 end
 
-local function updateArenaMelee(index)
+local function updateArenaMelee(index, numRole)
     if (not index) or (type(index) ~= "number") or (index < 1) or (index > 3) then return end
-    updateArena("#ATM", index)
+    updateArena("#ATM", index, numRole)
 end
 
-local function updateArenaRanged(index)
+local function updateArenaRanged(index, numRole)
     if (not index) or (type(index) ~= "number") or (index < 1) or (index > 3) then return end
-    updateArena("#ATR", index)
+    updateArena("#ATR", index, numRole)
 end
 
 local function updateFriendly(command, unitID, rosterIndex)
@@ -81,8 +89,9 @@ local function updateFriendly(command, unitID, rosterIndex)
         if (i <= global) or (i > 119) then
             local name, icon, body = GetMacroInfo(i)
             if body then
-                local secondaryMatch = body:match(command..rosterIndex)
-                local alternateMatch = body:match(command.."[0-9]")
+                local secondaryMatch = body:match(command..rosterIndex.."[0-9]?")
+                if secondaryMatch ~= command..rosterIndex then secondaryMatch = nil end
+                local alternateMatch = body:match(command.."[0-9]+")
                 local primaryMatch = body:match(command)
                 
                 if secondaryMatch or ((rosterIndex == 1) and (not alternateMatch) and primaryMatch) then
@@ -123,51 +132,49 @@ f:SetScript("OnEvent", function(self, event)
         checkAfterCombat = false
     end
     
-    local healerIndex, tankIndex, dpsIndex, casterIndex, meleeIndex, rangedIndex
-    for index = 1, 3 do
+    local healerIndex, tankIndex, dpsIndex, casterIndex, meleeIndex, rangedIndex = {}, {}, {}, {}, {}, {}
+    for index = 1, 5 do
         local specID = GetArenaOpponentSpec(index)
         if (specID and specID > 0) then
             local _, _, _, _, role = GetSpecializationInfoByID(specID)
-            if (not healerIndex) and (role == "HEALER") then
-                healerIndex = index
-            elseif (not tankIndex) and (role == "TANK") then
-                tankIndex = index
-            elseif (not dpsIndex) and (role == "DAMAGER") then
-                dpsIndex = index
+            if role == "HEALER" then
+                table.insert(healerIndex, index)
+            elseif role == "TANK" then
+                table.insert(tankIndex, index)
+            elseif role == "DAMAGER" then
+                table.insert(dpsIndex, index)
                 
                 local roleType = addon.SpecIDToRole[specID]
-                if (not casterIndex) and (roleType == "CASTER") then
-                    casterIndex = index
-                    if not rangedIndex then
-                        rangedIndex = index
-                    end
-                elseif (not meleeIndex) and (roleType == "MELEE") then
-                    meleeIndex = index
-                elseif (not rangedIndex) and (roleType == "RANGED") then
-                    rangedIndex = index
+                if roleType == "CASTER" then
+                    table.insert(casterIndex, index)
+                    table.insert(rangedIndex, index)
+                elseif roleType == "MELEE" then
+                    table.insert(meleeIndex, index)
+                elseif roleType == "RANGED" then
+                    table.insert(rangedIndex, index)
                 end
             end
         end
     end
     
-    if healerIndex then
-        updateArenaHealer(healerIndex)
+    for numHealer, index in pairs(healerIndex) do
+        updateArenaHealer(index, numHealer)
     end
-    if tankIndex then
-        updateArenaTank(tankIndex)
+    for numTank, index in pairs(tankIndex) do
+        updateArenaTank(index, numTank)
     end
-    if dpsIndex then
-        updateArenaDPS(dpsIndex)
+    for numDPS, index in pairs(dpsIndex) do
+        updateArenaDPS(index, numDPS)
     end
     
-    if casterIndex then
-        updateArenaCaster(casterIndex)
+    for numCaster, index in pairs(casterIndex) do
+        updateArenaCaster(index, numCaster)
     end
-    if meleeIndex then
-        updateArenaMelee(meleeIndex)
+    for numMelee, index in pairs(meleeIndex) do
+        updateArenaMelee(index, numMelee)
     end
-    if rangedIndex then
-        updateArenaRanged(rangedIndex)
+    for numRanged, index in pairs(rangedIndex) do
+        updateArenaRanged(index, numRanged)
     end
     
     --
