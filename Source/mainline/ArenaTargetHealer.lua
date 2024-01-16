@@ -33,7 +33,6 @@ f:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
 -- targets the 2nd or 12th DPS in the party/raid
 
 local function updateArena(command, index, numRole)
-    local global, char = GetNumMacros()
     for macroIndex = 1, 138 do
         local name, icon, body = GetMacroInfo(macroIndex)
         if name and body and body:find(command) then
@@ -84,25 +83,22 @@ local function updateArenaRanged(index, numRole)
 end
 
 local function updateFriendly(command, unitID, rosterIndex)
-    local global, char = GetNumMacros()
-    for i = 1, (char + 120) do
-        if (i <= global) or (i > 119) then
-            local name, icon, body = GetMacroInfo(i)
-            if body then
-                local secondaryMatch = body:match(command..rosterIndex.."[0-9]?")
-                if secondaryMatch ~= command..rosterIndex then secondaryMatch = nil end
-                local alternateMatch = body:match(command.."[0-9]+")
-                local primaryMatch = body:match(command)
-                
-                if secondaryMatch or ((rosterIndex == 1) and (not alternateMatch) and primaryMatch) then
-                    body = body:gsub("/tar [^%s]+", "/tar "..unitID)
-                    body = body:gsub("/target [^%s]+", "/tar "..unitID)
-                    body = body:gsub("/focus [^%s]+", "/focus "..unitID)
-                    body = body:gsub("@player", "@"..unitID)
-                    body = body:gsub("@party[%d]+", "@"..unitID)
-                    body = body:gsub("@raid[%d]+", "@"..unitID)
-                    EditMacro(name, name, icon, body)
-                end
+    for i = 1, 138 do
+        local name, icon, body = GetMacroInfo(i)
+        if body then
+            local secondaryMatch = body:match(command..rosterIndex.."[0-9]?")
+            if secondaryMatch ~= command..rosterIndex then secondaryMatch = nil end
+            local alternateMatch = body:match(command.."[0-9]+")
+            local primaryMatch = body:match(command)
+            
+            if secondaryMatch or ((rosterIndex == 1) and (not alternateMatch) and primaryMatch) then
+                body = body:gsub("/tar [^%s]+", "/tar "..unitID)
+                body = body:gsub("/target [^%s]+", "/tar "..unitID)
+                body = body:gsub("/focus [^%s]+", "/focus "..unitID)
+                body = body:gsub("@player", "@"..unitID)
+                body = body:gsub("@party[%d]+", "@"..unitID)
+                body = body:gsub("@raid[%d]+", "@"..unitID)
+                EditMacro(name, name, icon, body)
             end
         end
     end
