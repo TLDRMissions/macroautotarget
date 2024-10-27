@@ -32,21 +32,39 @@ f:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
 -- #RTH12
 -- targets the 2nd or 12th DPS in the party/raid
 
-local function updateArena(command, index, numRole)
+local macroCache = {}
+-- Lets cut down on the number of calls to GetMacroInfo by storing the entire list once per cycle instead
+-- The function seems to be costly to repeat unnecessarily
+local function cacheMacros()
+    wipe(macroCache)
     for macroIndex = 1, 138 do
         local name, icon, body = GetMacroInfo(macroIndex)
-        if name and body and body:find(command) then
-            local secondaryMatch = body:match(command..numRole.."[0-9]?")
-            if secondaryMatch ~= command..numRole then secondaryMatch = nil end
-            local alternateMatch = body:match(command.."[0-9]+")
-            local primaryMatch = body:match(command)
-        
-            if secondaryMatch or ((numRole == 1) and (not alternateMatch) and primaryMatch) then
-                body = body:gsub("/tar arena%d", "/tar arena"..index)
-                body = body:gsub("/target arena%d", "/tar arena"..index)
-                body = body:gsub("/focus arena%d", "/focus arena"..index)
-                body = body:gsub("/cast %[([^@%]]*)@arena%d([^@%]]*)%]", "/cast [%1@arena"..index.."%2]")
-                EditMacro(macroIndex, name, icon, body)
+        if name and body then
+            macroCache[macroIndex] = {name, icon, body}
+        end
+    end
+end
+
+local function updateArena(command, index, numRole)
+    for macroIndex = 1, 138 do
+        if macroCache[macroIndex] then
+            local name, icon, body = macroCache[macroIndex][1], macroCache[macroIndex][2], macroCache[macroIndex][3]
+            local cache = body
+            if body:find(command) then
+                local secondaryMatch = body:match(command..numRole.."[0-9]?")
+                if secondaryMatch ~= command..numRole then secondaryMatch = nil end
+                local alternateMatch = body:match(command.."[0-9]+")
+                local primaryMatch = body:match(command)
+            
+                if secondaryMatch or ((numRole == 1) and (not alternateMatch) and primaryMatch) then
+                    body = body:gsub("/tar arena%d", "/tar arena"..index)
+                    body = body:gsub("/target arena%d", "/tar arena"..index)
+                    body = body:gsub("/focus arena%d", "/focus arena"..index)
+                    body = body:gsub("/cast %[([^@%]]*)@arena%d([^@%]]*)%]", "/cast [%1@arena"..index.."%2]")
+                    if body ~= cache then
+                        EditMacro(macroIndex, name, icon, body)
+                    end
+                end
             end
         end
     end
@@ -83,9 +101,14 @@ local function updateArenaRanged(index, numRole)
 end
 
 local function updateFriendly(command, unitID, rosterIndex)
-    for i = 1, 138 do
-        local name, icon, body = GetMacroInfo(i)
-        if body then
+    for macroIndex = 1, 138 do
+        if macroCache[macroIndex] then
+            local name, icon, body = macroCache[macroIndex][1], macroCache[macroIndex][2], macroCache[macroIndex][3]
+            local cache = body
+            
+            -- explanation of this logic
+            -- we want to capture #RTT but not #RTT2 or #RTT32
+            -- or maybe we want to capture #RTT3 but have to exclude #RTT and #RTT31
             local secondaryMatch = body:match(command..rosterIndex.."[0-9]?")
             if secondaryMatch ~= command..rosterIndex then secondaryMatch = nil end
             local alternateMatch = body:match(command.."[0-9]+")
@@ -98,7 +121,9 @@ local function updateFriendly(command, unitID, rosterIndex)
                 body = body:gsub("@player", "@"..unitID)
                 body = body:gsub("@party[%d]+", "@"..unitID)
                 body = body:gsub("@raid[%d]+", "@"..unitID)
-                EditMacro(name, name, icon, body)
+                if body ~= cache then
+                    EditMacro(name, name, icon, body)
+                end
             end
         end
     end
@@ -128,6 +153,8 @@ f:SetScript("OnEvent", function(self, event)
         checkAfterCombat = false
     end
     
+    cacheMacros()
+    
     local healerIndex, tankIndex, dpsIndex, casterIndex, meleeIndex, rangedIndex = {}, {}, {}, {}, {}, {}
     for index = 1, 5 do
         local specID = GetArenaOpponentSpec(index)
@@ -152,7 +179,7 @@ f:SetScript("OnEvent", function(self, event)
             end
         end
     end
-    
+
     for numHealer, index in pairs(healerIndex) do
         updateArenaHealer(index, numHealer)
     end
@@ -226,7 +253,3 @@ f:SetScript("OnEvent", function(self, event)
         updateFriendlyDPS("player", i)
     end
 end)
-
---function testATH(index)
---    updateFriendlyHealer(index)
---end
