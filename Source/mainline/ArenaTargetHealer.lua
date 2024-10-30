@@ -7,6 +7,8 @@ f:RegisterEvent("GROUP_ROSTER_UPDATE")
 f:RegisterEvent("RAID_ROSTER_UPDATE")
 f:RegisterEvent("PLAYER_REGEN_ENABLED")
 f:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+f:RegisterEvent("UPDATE_MACROS")
+f:RegisterEvent("PLAYER_ENTERING_WORLD")
 
 -- supported commands:
 -- #ATH
@@ -32,11 +34,11 @@ f:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
 -- #RTH12
 -- targets the 2nd or 12th DPS in the party/raid
 
-local macroCache = {}
+local macroCache = nil
 -- Lets cut down on the number of calls to GetMacroInfo by storing the entire list once per cycle instead
 -- The function seems to be costly to repeat unnecessarily
 local function cacheMacros()
-    wipe(macroCache)
+    macroCache = {}
     for macroIndex = 1, 138 do
         local name, icon, body = GetMacroInfo(macroIndex)
         if name and body then
@@ -141,19 +143,39 @@ local function updateFriendlyDPS(unitID, rosterIndex)
     updateFriendly("#RTD", unitID, rosterIndex)
 end
 
-local checkAfterCombat
+local checkAfterCombat, updateMacrosPending
 f:SetScript("OnEvent", function(self, event)
+    if event == "PLAYER_ENTERING_WORLD" then
+        cacheMacros()
+        f:UnregisterEvent("PLAYER_ENTERING_WORLD")
+        return
+    end
+
     if (event ~= "PLAYER_REGEN_ENABLED") and InCombatLockdown() then
         checkAfterCombat = true
         return
     end
+    
+    if not macroCache then return end
+    
     if (event == "PLAYER_REGEN_ENABLED") and (not checkAfterCombat) then
         return
     elseif event == "PLAYER_REGEN_ENABLED" then
         checkAfterCombat = false
     end
     
-    cacheMacros()
+    if event == "UPDATE_MACROS" then
+        if updateMacrosPending then return end
+        updateMacrosPending = true
+        C_Timer.After(5, function()
+            cacheMacros()
+            updateMacrosPending = false
+            f:GetScript("OnEvent")(self, "MANUAL")
+        end)
+        return
+    end
+    
+    if updateMacrosPending then return end
     
     local healerIndex, tankIndex, dpsIndex, casterIndex, meleeIndex, rangedIndex = {}, {}, {}, {}, {}, {}
     for index = 1, 5 do
