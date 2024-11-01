@@ -143,7 +143,7 @@ local function updateFriendlyDPS(unitID, rosterIndex)
     updateFriendly("#RTD", unitID, rosterIndex)
 end
 
-local checkAfterCombat, updateMacrosPending
+local checkAfterCombat, updateMacrosPending, busy
 f:SetScript("OnEvent", function(self, event)
     if event == "PLAYER_ENTERING_WORLD" then
         cacheMacros()
@@ -164,6 +164,8 @@ f:SetScript("OnEvent", function(self, event)
         checkAfterCombat = false
     end
     
+    if busy then return end
+    
     if event == "UPDATE_MACROS" then
         if updateMacrosPending then return end
         updateMacrosPending = true
@@ -177,101 +179,182 @@ f:SetScript("OnEvent", function(self, event)
     
     if updateMacrosPending then return end
     
-    local healerIndex, tankIndex, dpsIndex, casterIndex, meleeIndex, rangedIndex = {}, {}, {}, {}, {}, {}
-    for index = 1, 5 do
-        local specID = GetArenaOpponentSpec(index)
-        if (specID and specID > 0) then
-            local _, _, _, _, role = GetSpecializationInfoByID(specID)
-            if role == "HEALER" then
-                table.insert(healerIndex, index)
-            elseif role == "TANK" then
-                table.insert(tankIndex, index)
-            elseif role == "DAMAGER" then
-                table.insert(dpsIndex, index)
-                
-                local roleType = addon.SpecIDToRole[specID]
-                if roleType == "CASTER" then
-                    table.insert(casterIndex, index)
-                    table.insert(rangedIndex, index)
-                elseif roleType == "MELEE" then
-                    table.insert(meleeIndex, index)
-                elseif roleType == "RANGED" then
-                    table.insert(rangedIndex, index)
+    busy = true
+    
+    C_Timer.After(0.2, function()
+        if InCombatLockdown() then
+            busy = false
+            return
+        end
+        
+        local healerIndex, tankIndex, dpsIndex, casterIndex, meleeIndex, rangedIndex = {}, {}, {}, {}, {}, {}
+        for index = 1, 5 do
+            local specID = GetArenaOpponentSpec(index)
+            if (specID and specID > 0) then
+                local _, _, _, _, role = GetSpecializationInfoByID(specID)
+                if role == "HEALER" then
+                    table.insert(healerIndex, index)
+                elseif role == "TANK" then
+                    table.insert(tankIndex, index)
+                elseif role == "DAMAGER" then
+                    table.insert(dpsIndex, index)
+                    
+                    local roleType = addon.SpecIDToRole[specID]
+                    if roleType == "CASTER" then
+                        table.insert(casterIndex, index)
+                        table.insert(rangedIndex, index)
+                    elseif roleType == "MELEE" then
+                        table.insert(meleeIndex, index)
+                    elseif roleType == "RANGED" then
+                        table.insert(rangedIndex, index)
+                    end
                 end
             end
         end
-    end
 
-    for numHealer, index in pairs(healerIndex) do
-        updateArenaHealer(index, numHealer)
-    end
-    for numTank, index in pairs(tankIndex) do
-        updateArenaTank(index, numTank)
-    end
-    for numDPS, index in pairs(dpsIndex) do
-        updateArenaDPS(index, numDPS)
-    end
-    
-    for numCaster, index in pairs(casterIndex) do
-        updateArenaCaster(index, numCaster)
-    end
-    for numMelee, index in pairs(meleeIndex) do
-        updateArenaMelee(index, numMelee)
-    end
-    for numRanged, index in pairs(rangedIndex) do
-        updateArenaRanged(index, numRanged)
-    end
-    
-    --
-    -- ARENA / FRIENDLY SEPARATOR
-    --
-    
-    healerIndex, tankIndex, dpsIndex = nil, nil, nil
-    local numHealer, numTank, numDPS = 0, 0, 0
-    local prefix = "raid"
-    
-    if IsInRaid() then
-        for index = 1, MAX_RAID_MEMBERS do
-            local name, _, _, _, _, _, _, _, _, _, _, role = GetRaidRosterInfo(index)
-            if name ~= UnitName("player") then
-                if (role == "HEALER") then
-                    numHealer = numHealer + 1
-                    updateFriendlyHealer(prefix..index, numHealer)
-                elseif (not tankIndex) and (role == "TANK") then
-                    numTank = numTank + 1
-                    updateFriendlyTank(prefix..index, numTank)
-                elseif (not dpsIndex) and (role == "DAMAGER") then
-                    numDPS = numDPS + 1
-                    updateFriendlyDPS(prefix..index, numDPS)
+        C_Timer.After(0.2, function()
+            if InCombatLockdown() then
+                busy = false
+                return
+            end
+            for numHealer, index in pairs(healerIndex) do
+                updateArenaHealer(index, numHealer)
+            end
+            
+            C_Timer.After(0.2, function()
+                if InCombatLockdown() then
+                    busy = false
+                    return
                 end
-            end
-        end
-    elseif IsInGroup() then
-        prefix = "party"
-        for index = 1, GetNumSubgroupMembers() do
-            local role = UnitGroupRolesAssigned(prefix..index)
-            if (role == "HEALER") then
-                numHealer = numHealer + 1
-                updateFriendlyHealer(prefix..index, numHealer)
-            elseif (not tankIndex) and (role == "TANK") then
-                numTank = numTank + 1
-                updateFriendlyTank(prefix..index, numTank)
-            elseif (not dpsIndex) and (role == "DAMAGER") then
-                numDPS = numDPS + 1
-                updateFriendlyDPS(prefix..index, numDPS)
-            end
-        end
-    end
-    
-    for i = (numHealer+1), MAX_RAID_MEMBERS do
-        updateFriendlyHealer("player", i)
-    end
-    
-    for i = (numTank+1), MAX_RAID_MEMBERS do
-        updateFriendlyTank("player", i)
-    end
-    
-    for i = (numDPS+1), MAX_RAID_MEMBERS do
-        updateFriendlyDPS("player", i)
-    end
+                for numTank, index in pairs(tankIndex) do
+                    updateArenaTank(index, numTank)
+                end
+                
+                C_Timer.After(0.2, function()
+                    if InCombatLockdown() then
+                        busy = false
+                        return
+                    end
+                    
+                    C_Timer.After(0.2, function()
+                        if InCombatLockdown() then
+                            busy = false
+                            return
+                        end
+                        for numDPS, index in pairs(dpsIndex) do
+                            updateArenaDPS(index, numDPS)
+                        end
+                        
+                        C_Timer.After(0.2, function()
+                            if InCombatLockdown() then
+                                busy = false
+                                return
+                            end
+                            for numCaster, index in pairs(casterIndex) do
+                                updateArenaCaster(index, numCaster)
+                            end
+                            
+                            C_Timer.After(0.2, function()
+                                if InCombatLockdown() then
+                                    busy = false
+                                    return
+                                end
+                                for numMelee, index in pairs(meleeIndex) do
+                                    updateArenaMelee(index, numMelee)
+                                end
+                                
+                                C_Timer.After(0.2, function()
+                                    if InCombatLockdown() then
+                                        busy = false
+                                        return
+                                    end
+                                    for numRanged, index in pairs(rangedIndex) do
+                                        updateArenaRanged(index, numRanged)
+                                    end
+                                    
+                                    --
+                                    -- ARENA / FRIENDLY SEPARATOR
+                                    --
+                                    
+                                    C_Timer.After(0.2, function()
+                                        if InCombatLockdown() then
+                                            busy = false
+                                            return
+                                        end
+                                        healerIndex, tankIndex, dpsIndex = nil, nil, nil
+                                        local numHealer, numTank, numDPS = 0, 0, 0
+                                        local prefix = "raid"
+                                        
+                                        if IsInRaid() then
+                                            for index = 1, MAX_RAID_MEMBERS do
+                                                local name, _, _, _, _, _, _, _, _, _, _, role = GetRaidRosterInfo(index)
+                                                if name ~= UnitName("player") then
+                                                    if (role == "HEALER") then
+                                                        numHealer = numHealer + 1
+                                                        updateFriendlyHealer(prefix..index, numHealer)
+                                                    elseif (not tankIndex) and (role == "TANK") then
+                                                        numTank = numTank + 1
+                                                        updateFriendlyTank(prefix..index, numTank)
+                                                    elseif (not dpsIndex) and (role == "DAMAGER") then
+                                                        numDPS = numDPS + 1
+                                                        updateFriendlyDPS(prefix..index, numDPS)
+                                                    end
+                                                end
+                                            end
+                                        elseif IsInGroup() then
+                                            prefix = "party"
+                                            for index = 1, GetNumSubgroupMembers() do
+                                                local role = UnitGroupRolesAssigned(prefix..index)
+                                                if (role == "HEALER") then
+                                                    numHealer = numHealer + 1
+                                                    updateFriendlyHealer(prefix..index, numHealer)
+                                                elseif (not tankIndex) and (role == "TANK") then
+                                                    numTank = numTank + 1
+                                                    updateFriendlyTank(prefix..index, numTank)
+                                                elseif (not dpsIndex) and (role == "DAMAGER") then
+                                                    numDPS = numDPS + 1
+                                                    updateFriendlyDPS(prefix..index, numDPS)
+                                                end
+                                            end
+                                        end
+                                        
+                                        C_Timer.After(0.2, function()
+                                            if InCombatLockdown() then
+                                                busy = false
+                                                return
+                                            end
+                                            for i = (numHealer+1), MAX_RAID_MEMBERS do
+                                                updateFriendlyHealer("player", i)
+                                            end
+                                            
+                                            C_Timer.After(0.2, function()
+                                                if InCombatLockdown() then
+                                                    busy = false
+                                                    return
+                                                end
+                                                for i = (numTank+1), MAX_RAID_MEMBERS do
+                                                    updateFriendlyTank("player", i)
+                                                end
+                                                
+                                                C_Timer.After(0.2, function()
+                                                    if InCombatLockdown() then
+                                                        busy = false
+                                                        return
+                                                    end
+                                                    for i = (numDPS+1), MAX_RAID_MEMBERS do
+                                                        updateFriendlyDPS("player", i)
+                                                    end
+                                                    busy = false
+                                                end)
+                                            end)
+                                        end)
+                                    end)
+                                end)
+                            end)
+                        end)
+                    end)
+                end)
+            end)
+        end)
+    end)
 end)
