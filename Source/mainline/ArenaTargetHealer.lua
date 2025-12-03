@@ -184,6 +184,7 @@ f:SetScript("OnEvent", function(self, event)
     C_Timer.After(0.2, function()
         if InCombatLockdown() then
             busy = false
+            checkAfterCombat = true
             return
         end
         
@@ -215,6 +216,7 @@ f:SetScript("OnEvent", function(self, event)
         C_Timer.After(0.2, function()
             if InCombatLockdown() then
                 busy = false
+                checkAfterCombat = true
                 return
             end
             for numHealer, index in pairs(healerIndex) do
@@ -224,6 +226,7 @@ f:SetScript("OnEvent", function(self, event)
             C_Timer.After(0.2, function()
                 if InCombatLockdown() then
                     busy = false
+                    checkAfterCombat = true
                     return
                 end
                 for numTank, index in pairs(tankIndex) do
@@ -233,12 +236,14 @@ f:SetScript("OnEvent", function(self, event)
                 C_Timer.After(0.2, function()
                     if InCombatLockdown() then
                         busy = false
+                        checkAfterCombat = true
                         return
                     end
                     
                     C_Timer.After(0.2, function()
                         if InCombatLockdown() then
                             busy = false
+                            checkAfterCombat = true
                             return
                         end
                         for numDPS, index in pairs(dpsIndex) do
@@ -248,6 +253,7 @@ f:SetScript("OnEvent", function(self, event)
                         C_Timer.After(0.2, function()
                             if InCombatLockdown() then
                                 busy = false
+                                checkAfterCombat = true
                                 return
                             end
                             for numCaster, index in pairs(casterIndex) do
@@ -257,6 +263,7 @@ f:SetScript("OnEvent", function(self, event)
                             C_Timer.After(0.2, function()
                                 if InCombatLockdown() then
                                     busy = false
+                                    checkAfterCombat = true
                                     return
                                 end
                                 for numMelee, index in pairs(meleeIndex) do
@@ -266,6 +273,7 @@ f:SetScript("OnEvent", function(self, event)
                                 C_Timer.After(0.2, function()
                                     if InCombatLockdown() then
                                         busy = false
+                                        checkAfterCombat = true
                                         return
                                     end
                                     for numRanged, index in pairs(rangedIndex) do
@@ -279,6 +287,7 @@ f:SetScript("OnEvent", function(self, event)
                                     C_Timer.After(0.2, function()
                                         if InCombatLockdown() then
                                             busy = false
+                                            checkAfterCombat = true
                                             return
                                         end
                                         healerIndex, tankIndex, dpsIndex = nil, nil, nil
@@ -321,6 +330,7 @@ f:SetScript("OnEvent", function(self, event)
                                         C_Timer.After(0.2, function()
                                             if InCombatLockdown() then
                                                 busy = false
+                                                checkAfterCombat = true
                                                 return
                                             end
                                             for i = (numHealer+1), MAX_RAID_MEMBERS do
@@ -330,6 +340,7 @@ f:SetScript("OnEvent", function(self, event)
                                             C_Timer.After(0.2, function()
                                                 if InCombatLockdown() then
                                                     busy = false
+                                                    checkAfterCombat = true
                                                     return
                                                 end
                                                 for i = (numTank+1), MAX_RAID_MEMBERS do
@@ -339,6 +350,7 @@ f:SetScript("OnEvent", function(self, event)
                                                 C_Timer.After(0.2, function()
                                                     if InCombatLockdown() then
                                                         busy = false
+                                                        checkAfterCombat = true
                                                         return
                                                     end
                                                     for i = (numDPS+1), MAX_RAID_MEMBERS do
