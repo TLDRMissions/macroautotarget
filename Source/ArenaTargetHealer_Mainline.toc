@@ -1,4 +1,4 @@
-## Interface: 110207
+## Interface: 120000
 ## Title: Macro Auto Target
 ## Author: Teelo (US-Jubei'thos)
 ## X-Curse-Project-ID: 415931
